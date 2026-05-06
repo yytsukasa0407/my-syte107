@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>運命のお相手探し - 婚活ゲーム</title>
+    
+    <!-- Tailwind CSS (デザイン用) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons (アイコン用) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* アニメーションの定義 */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes bounce { 0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8,0,1,1); } 50% { transform: none; animation-timing-function: cubic-bezier(0,0,0.2,1); } }
+        @keyframes pulse { 50% { opacity: .5; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .zoom-in { animation: zoomIn 0.5s ease-out forwards; }
+        .animate-bounce-custom { animation: bounce 1s infinite; }
+        .animate-pulse-custom { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .animate-spin-custom { animation: spin 1s linear infinite; }
+        
+        /* アイコンの色指定などを上書きするためのスタイル */
+        .fill-rose-500 { fill: #f43f5e; }
+        .fill-white { fill: #ffffff; }
+    </style>
+</head>
+<body class="min-h-screen bg-rose-50 flex flex-col items-center justify-center py-12 px-4 font-sans relative overflow-hidden">
+
+    <!-- 背景の装飾 -->
+    <div class="absolute top-10 left-10 text-pink-200 opacity-50">
+        <i data-lucide="heart" class="w-16 h-16"></i>
+    </div>
+    <div class="absolute bottom-20 right-10 text-pink-200 opacity-50">
+        <i data-lucide="heart" class="w-20 h-20"></i>
+    </div>
+
+    <div class="max-w-md w-full z-10 flex flex-col items-center">
+        
+        <!-- ヘッダー部分 -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-rose-600 mb-2 flex items-center justify-center gap-2">
+                <i data-lucide="heart" class="text-rose-500 fill-rose-500 w-6 h-6"></i>
+                運命のお相手探し
+                <i data-lucide="heart" class="text-rose-500 fill-rose-500 w-6 h-6"></i>
+            </h1>
+            <p class="text-gray-600 text-sm">
+                気になる女性にアプローチしよう！
+            </p>
+        </div>
+
+        <!-- 1人のキャラクター表示 -->
+        <div class="w-full bg-white rounded-3xl shadow-xl p-8 text-center border border-gray-100 relative">
+            
+            <div id="char-color" class="w-40 h-40 mx-auto rounded-full flex items-center justify-center mb-6 shadow-xl ring-4 ring-rose-50 overflow-hidden">
+                <img id="char-img" src="" alt="女性の写真" class="w-full h-full object-cover" />
+            </div>
+            
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">
+                <span id="char-name">名前</span> 
+                <span id="char-age" class="text-xl font-normal text-gray-500">20歳</span>
+            </h2>
+            
+            <div class="text-left bg-gray-50 rounded-xl p-4 mb-8 space-y-2">
+                <p class="text-gray-700 flex justify-between">
+                    <span class="font-semibold text-gray-500">職業</span> 
+                    <span id="char-job">職業</span>
+                </p>
+                <hr class="border-gray-200" />
+                <p class="text-gray-700 flex justify-between">
+                    <span class="font-semibold text-gray-500">趣味</span> 
+                    <span id="char-hobby">趣味</span>
+                </p>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <!-- アプローチボタン -->
+                <button id="btn-approach" class="w-full py-4 px-4 bg-rose-500 text-white font-bold text-lg rounded-2xl hover:bg-rose-600 active:scale-95 transition-all shadow-md hover:shadow-lg flex justify-center items-center gap-2 disabled:opacity-70 disabled:active:scale-100">
+                    <div id="btn-approach-content" class="flex items-center gap-2">
+                        <i data-lucide="heart" class="w-6 h-6 fill-white"></i>
+                        アプローチする
+                    </div>
+                    <i id="btn-approach-loading" data-lucide="loader-2" class="w-6 h-6 animate-spin-custom hidden"></i>
+                </button>
+
+                <!-- スキップボタン -->
+                <button id="btn-skip" class="w-full py-3 px-4 bg-gray-100 text-gray-600 font-semibold rounded-2xl hover:bg-gray-200 active:scale-95 transition-all flex flex-col justify-center items-center text-sm disabled:opacity-70 disabled:active:scale-100">
+                    <span>ごめんなさい。</span>
+                    <span>次の人をご紹介してください。</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 結果表示モーダル (最初は非表示) -->
+    <div id="modal-container" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden fade-in">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center relative overflow-hidden">
+
+            <!-- 結果表示：成功 -->
+            <div id="result-success" class="hidden flex-col items-center zoom-in">
+                <div class="absolute inset-0 bg-pink-50 pointer-events-none"></div>
+                <div class="relative z-10 flex flex-col items-center w-full">
+                    <div class="w-32 h-32 mb-4 relative mx-auto">
+                        <img id="success-img" src="" alt="成功" class="w-full h-full object-cover rounded-full shadow-lg ring-4 ring-pink-200" />
+                        <i data-lucide="sparkles" class="absolute -top-4 -right-4 text-yellow-400 w-8 h-8 animate-bounce-custom"></i>
+                    </div>
+                    <h3 class="text-3xl font-bold text-rose-600 mb-6">「お願いいたします。」</h3>
+                    <div class="flex gap-2 mb-8">
+                        <i data-lucide="heart" class="w-8 h-8 text-rose-500 fill-rose-500 animate-pulse-custom"></i>
+                        <i data-lucide="heart" class="w-8 h-8 text-rose-500 fill-rose-500 animate-pulse-custom" style="animation-delay: 0.1s"></i>
+                        <i data-lucide="heart" class="w-8 h-8 text-rose-500 fill-rose-500 animate-pulse-custom" style="animation-delay: 0.2s"></i>
+                    </div>
+                    <p id="success-text" class="text-gray-700 font-medium mb-8">
+                        見事、お付き合いすることになりました！
+                    </p>
+                    <button onclick="handleNext()" class="flex items-center gap-2 px-6 py-3 bg-rose-500 text-white font-bold rounded-full hover:bg-rose-600 transition-colors shadow-lg hover:shadow-xl">
+                        <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                        新しく探しに行く
+                    </button>
+                </div>
+            </div>
+
+            <!-- 結果表示：失敗 -->
+            <div id="result-fail" class="hidden flex-col items-center zoom-in w-full">
+                <div class="w-32 h-32 mb-4 mx-auto opacity-80">
+                    <img id="fail-img" src="" alt="失敗" class="w-full h-full object-cover rounded-full shadow-md grayscale" />
+                </div>
+                <h3 class="text-3xl font-bold text-blue-600 mb-6">「ごめんなさい。」</h3>
+                <div class="mb-8">
+                    <i data-lucide="heart-crack" class="w-16 h-16 text-blue-400 mx-auto"></i>
+                </div>
+                <p id="fail-text" class="text-gray-600 mb-8">
+                    残念ながら、縁がなかったようです...。
+                </p>
+                <button onclick="handleNext()" class="flex items-center gap-2 px-6 py-3 bg-gray-800 text-white font-bold rounded-full hover:bg-gray-700 transition-colors shadow-lg hover:shadow-xl">
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    次の女性を紹介してもらう
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JavaScript 処理 -->
+    <script>
+        // 音声変換関数 (PCM to WAV)
+        function pcmToWav(pcmData, sampleRate, numChannels) {
+            const dataLength = pcmData.byteLength || pcmData.length;
+            const byteRate = sampleRate * numChannels * 2;
+            const blockAlign = numChannels * 2;
+            const buffer = new ArrayBuffer(44 + dataLength);
+            const view = new DataView(buffer);
+
+            const writeString = (view, offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + dataLength, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); // PCM format
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, 2 * 8, true); // bits per sample
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataLength, true);
+
+            const pcmArray = new Uint8Array(pcmData);
+            const wavArray = new Uint8Array(buffer, 44);
+            wavArray.set(pcmArray);
+
+            return buffer;
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // 音声生成API (TTS)
+        async function speak(text, voiceName) {
+            const apiKey = ""; // 実行環境で自動的に設定されます
+            
+            const payload = {
+                contents: [{ parts: [{ text: text }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: {
+                                voiceName: voiceName || "Kore"
+                            }
+                        }
+                    }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            let response;
+            let success = false;
+
+            for (let i = 0; i <= delays.length; i++) {
+                try {
+                    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (response.ok) {
+                        success = true;
+                        break;
+                    }
+                } catch (err) {}
+                
+                if (i < delays.length) {
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+            }
+
+            if (!success) return;
+
+            try {
+                const result = await response.json();
+                const inlineData = result.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+                
+                if (inlineData && inlineData.mimeType.startsWith('audio/L16')) {
+                    const rateMatch = inlineData.mimeType.match(/rate=(\d+)/);
+                    const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+                    
+                    const pcmBuffer = base64ToArrayBuffer(inlineData.data);
+                    const wavBuffer = pcmToWav(pcmBuffer, sampleRate, 1);
+                    
+                    const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+                    audio.play().catch(e => console.error("音声の再生に失敗:", e));
+                }
+            } catch (err) {
+                console.error("音声データの処理に失敗:", err);
+            }
+        }
+
+        // キャラクター生成用データ
+        const FIRST_NAMES = ['さくら', 'ひまわり', 'すみれ', 'あやの', 'みさき', 'ゆい', 'かな', 'りな', 'ななみ', 'ももこ'];
+        const JOBS = ['保育士', 'アパレル店員', 'ITエンジニア', '看護師', '事務職', '美容師', 'デザイナー', '公務員', 'カフェ店員', '受付嬢'];
+        const HOBBIES = ['カフェ巡り', '旅行', '映画鑑賞', 'ゲーム', '読書', 'ヨガ', '料理', '写真', 'ライブ参戦', 'アニメ'];
+        const IMAGE_IDS = [
+            '1544005313-94ddf0286df2', '1534528741775-53994a69daeb', '1531746020798-e6953c6e8e04',
+            '1524504388940-b1c1722653e1', '1529626455594-4ff0802cfb7e', '1494790108377-be9c29b29330',
+            '1517841905240-472988babdf9', '1488426862026-32b8cbfdbace', '1554151228-14d9def656e4',
+            '1508214751196-bcfd4ca60f91'
+        ];
+        const VOICES = ['Kore', 'Aoede', 'Leda', 'Zephyr', 'Puck', 'Charon'];
+        const COLORS = ['bg-pink-100', 'bg-orange-100', 'bg-purple-100', 'bg-blue-100', 'bg-green-100', 'bg-yellow-100'];
+
+        let currentChar = null;
+        let isWaiting = false;
+
+        function generateCharacter() {
+            return {
+                name: FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)],
+                age: Math.floor(Math.random() * 10) + 20,
+                job: JOBS[Math.floor(Math.random() * JOBS.length)],
+                hobby: HOBBIES[Math.floor(Math.random() * HOBBIES.length)],
+                imageUrl: `https://images.unsplash.com/photo-${IMAGE_IDS[Math.floor(Math.random() * IMAGE_IDS.length)]}?w=400&h=400&fit=crop&crop=faces&q=80`,
+                color: COLORS[Math.floor(Math.random() * COLORS.length)],
+                voice: VOICES[Math.floor(Math.random() * VOICES.length)]
+            };
+        }
+
+        // 画面の更新
+        function renderCharacter() {
+            currentChar = generateCharacter();
+            
+            document.getElementById('char-name').innerText = currentChar.name;
+            document.getElementById('char-age').innerText = `${currentChar.age}歳`;
+            document.getElementById('char-job').innerText = currentChar.job;
+            document.getElementById('char-hobby').innerText = currentChar.hobby;
+            document.getElementById('char-img').src = currentChar.imageUrl;
+            
+            // 背景色の更新
+            const colorDiv = document.getElementById('char-color');
+            colorDiv.className = `w-40 h-40 mx-auto rounded-full flex items-center justify-center mb-6 shadow-xl ring-4 ring-rose-50 overflow-hidden ${currentChar.color}`;
+        }
+
+        // 次の人へ（リセット処理）
+        function handleNext() {
+            document.getElementById('modal-container').classList.add('hidden');
+            document.getElementById('result-success').classList.add('hidden');
+            document.getElementById('result-success').classList.remove('flex');
+            document.getElementById('result-fail').classList.add('hidden');
+            document.getElementById('result-fail').classList.remove('flex');
+            renderCharacter();
+        }
+
+        // アプローチ実行
+        function handleSelect() {
+            if (isWaiting) return;
+            isWaiting = true;
+
+            // ボタンのローディング状態
+            document.getElementById('btn-approach').disabled = true;
+            document.getElementById('btn-skip').disabled = true;
+            document.getElementById('btn-approach-content').classList.add('hidden');
+            document.getElementById('btn-approach-loading').classList.remove('hidden');
+
+            setTimeout(() => {
+                isWaiting = false;
+                
+                // ボタンのローディング解除
+                document.getElementById('btn-approach').disabled = false;
+                document.getElementById('btn-skip').disabled = false;
+                document.getElementById('btn-approach-content').classList.remove('hidden');
+                document.getElementById('btn-approach-loading').classList.add('hidden');
+
+                // 結果判定
+                const isSuccess = Math.random() > 0.5;
+                
+                // モーダル表示
+                document.getElementById('modal-container').classList.remove('hidden');
+                
+                if (isSuccess) {
+                    document.getElementById('success-img').src = currentChar.imageUrl;
+                    document.getElementById('success-text').innerText = `見事、${currentChar.name}さんとお付き合いすることになりました！`;
+                    document.getElementById('result-success').classList.remove('hidden');
+                    document.getElementById('result-success').classList.add('flex');
+                    speak('お願いいたします。', currentChar.voice);
+                } else {
+                    document.getElementById('fail-img').src = currentChar.imageUrl;
+                    document.getElementById('fail-text').innerText = `残念ながら、${currentChar.name}さんとは縁がなかったようです...。`;
+                    document.getElementById('result-fail').classList.remove('hidden');
+                    document.getElementById('result-fail').classList.add('flex');
+                    speak('ごめんなさい。', currentChar.voice);
+                }
+            }, 1500);
+        }
+
+        // イベントリスナーの登録と初期化
+        document.getElementById('btn-approach').addEventListener('click', handleSelect);
+        document.getElementById('btn-skip').addEventListener('click', handleNext);
+
+        // 初期描画
+        renderCharacter();
+        
+        // Lucideアイコンの初期化
+        lucide.createIcons();
+
+    </script>
+</body>
+</html>
